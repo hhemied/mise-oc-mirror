@@ -45,6 +45,43 @@ mise exec -- oc-mirror version
 For local development point the plugin at a checkout instead:
 `oc-mirror = "/absolute/path/to/mise-oc-mirror"`.
 
+## mise without a plugin
+
+mise can also install `oc-mirror` with its built-in
+[`http` backend](https://mise.jdx.dev/dev-tools/backends/http.html), with no
+plugin at all. mise then downloads and verifies the file itself and records
+the URL and checksum in `mise.lock`.
+
+```toml
+# mise.toml
+[tools."http:oc-mirror"]
+version = "latest"
+postinstall = "chmod +x \"$MISE_TOOL_INSTALL_PATH/oc-mirror\""
+version_list_url = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/"
+version_regex = 'href="(\d+\.\d+\.\d+)/"'
+version_expr = 'sortVersions(filter(versions, int(split(#, ".")[0]) == 4 && int(split(#, ".")[1]) >= 14))'
+
+[tools."http:oc-mirror".platforms]
+linux-x64 = { url = "https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/{{ version }}/oc-mirror.tar.gz", checksum_url = "https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/{{ version }}/sha256sum.txt" }
+linux-arm64 = { url = "https://mirror.openshift.com/pub/openshift-v4/aarch64/clients/ocp/{{ version }}/oc-mirror.tar.gz", checksum_url = "https://mirror.openshift.com/pub/openshift-v4/aarch64/clients/ocp/{{ version }}/sha256sum.txt" }
+```
+
+The tool is then named `http:oc-mirror` (`mise ls-remote http:oc-mirror`).
+The `postinstall` line is needed because Red Hat's tarball stores the binary
+without the executable bit.
+
+Compared with the plugin, this has fixed rules where the plugin checks the
+mirror:
+
+| | Plugin | `http` backend |
+|---|--------|----------------|
+| Versions listed | Whatever ships `oc-mirror` for the host architecture | 4.14 and later 4.y releases; edit `version_expr` when a 5.y release ships `oc-mirror` |
+| `x86_64` 4.10 – 4.13 | Listed | Not listed |
+| `rhel9` variant | `variant = "rhel9"` | Change the file name in both `url` values |
+| `ppc64le`, `s390x` | Supported | Not supported by mise's platform keys |
+| `mise.lock` | Version only | Version, URL and checksum |
+| Works with asdf | Yes | No |
+
 ## Install with asdf
 
 ```sh
