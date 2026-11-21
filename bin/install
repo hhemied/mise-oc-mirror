@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# bin/install — place the binary fetched by bin/download into
+# ${ASDF_INSTALL_PATH}/bin/oc-mirror.
+
+set -euo pipefail
+
+# shellcheck source=lib/utils.bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/utils.bash"
+
+: "${ASDF_INSTALL_VERSION:?ASDF_INSTALL_VERSION is required}"
+: "${ASDF_INSTALL_PATH:?ASDF_INSTALL_PATH is required}"
+: "${ASDF_DOWNLOAD_PATH:?ASDF_DOWNLOAD_PATH is required (asdf >= 0.8 or mise)}"
+
+require_linux
+
+src="${ASDF_DOWNLOAD_PATH}/${TOOL_NAME}"
+dest="${ASDF_INSTALL_PATH}/bin/${TOOL_NAME}"
+
+[ -f "${src}" ] || fail "${src} not found; bin/download did not run or failed"
+
+mkdir -p "${ASDF_INSTALL_PATH}/bin"
+cp "${src}" "${dest}.partial"
+chmod 0755 "${dest}.partial"
+mv -f "${dest}.partial" "${dest}"
+
+# Advisory only: the file is installed, but tell the user now if it cannot
+# start on this host (most often a missing shared library).
+if ! output="$("${dest}" --help 2>&1)"; then
+  log "WARNING: ${TOOL_NAME} ${ASDF_INSTALL_VERSION} is installed but does not start on this host:"
+  printf '%s\n' "${output}" | tail -n 3 >&2
+  log "If libgpgme.so.11 is missing, install your distro's gpgme package."
+fi
+
+log "installed ${TOOL_NAME} ${ASDF_INSTALL_VERSION} -> ${dest}"

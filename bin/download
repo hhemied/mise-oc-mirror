@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# bin/download — fetch, verify and unpack one oc-mirror version.
+#
+# Leaves a single file, ${ASDF_DOWNLOAD_PATH}/oc-mirror, on success and
+# nothing on failure. bin/install then copies it into place.
+#
+# The tarball is checked against the SHA-256 that Red Hat publishes in the
+# version directory's sha256sum.txt.
+
+set -euo pipefail
+
+# shellcheck source=lib/utils.bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/utils.bash"
+
+: "${ASDF_INSTALL_VERSION:?ASDF_INSTALL_VERSION is required}"
+: "${ASDF_DOWNLOAD_PATH:?ASDF_DOWNLOAD_PATH is required}"
+
+if [ "${ASDF_INSTALL_TYPE:-version}" != "version" ]; then
+  fail "only released versions can be installed (got install type '${ASDF_INSTALL_TYPE}')"
+fi
+
+require_linux
+require_cmds curl tar awk
+
+version="${ASDF_INSTALL_VERSION}"
+arch="$(resolve_arch)"
+tarball="$(resolve_tarball_name)"
+base_url="$(version_dir_url "${arch}" "${version}")"
+
+mkdir -p "${ASDF_DOWNLOAD_PATH}"
+# Work inside the download directory (not /tmp, which is often a small tmpfs;
+# the unpacked binary is over 300 MB).
+work="${ASDF_DOWNLOAD_PATH}/.work"
+rm -rf "${work}"
+mkdir -p "${work}/unpacked"
+trap 'rm -rf "${work}"' EXIT
+
+log "downloading ${base_url}/${tarball}"
+if ! curl -fsSL --retry 3 --retry-delay 2 -o "${work}/${tarball}" "${base_url}/${tarball}"; then
+  fail "failed to download ${base_url}/${tarball}
+       Check that version '${version}' exists for '${arch}' and ships '${tarball}':
+       ${base_url}/"
+fi
+
+curl -fsSL --retry 3 --retry-delay 2 -o "${work}/sha256sum.txt" "${base_url}/sha256sum.txt" ||
+  fail "failed to download ${base_url}/sha256sum.txt"
+
+expected="$(awk -v f="${tarball}" '$2 == f || $2 == "*" f { print $1; exit }' "${work}/sha256sum.txt")"
+[ -n "${expected}" ] || fail "no checksum for ${tarball} in ${base_url}/sha256sum.txt"
+
+if command -v sha256sum >/dev/null 2>&1; then
+  actual="$(sha256sum "${work}/${tarball}" | awk '{ print $1 }')"
+elif command -v shasum >/dev/null 2>&1; then
+  actual="$(shasum -a 256 "${work}/${tarball}" | awk '{ print $1 }')"
+else
+  fail "required command 'sha256sum' (or 'shasum') not found in PATH"
+fi
+
+if [ "${actual}" != "${expected}" ]; then
+  fail "checksum mismatch for ${tarball}
+       expected ${expected}
+       actual   ${actual}"
+fi
+log "checksum OK (sha256 ${actual})"
+
+tar -xzf "${work}/${tarball}" -C "${work}/unpacked" || fail "failed to extract ${tarball}"
+[ -f "${work}/unpacked/${TOOL_NAME}" ] || fail "'${TOOL_NAME}' not found inside ${tarball}"
+
+mv -f "${work}/unpacked/${TOOL_NAME}" "${ASDF_DOWNLOAD_PATH}/${TOOL_NAME}"

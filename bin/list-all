@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# bin/list-all — list every installable oc-mirror version.
+#
+# Output: one line, space-separated, oldest first (the asdf contract; mise
+# accepts the same format).
+#
+# Pre-releases (-rc.N, -ec.N) are left out unless OC_MIRROR_INCLUDE_PRERELEASE=1.
+
+set -euo pipefail
+
+# shellcheck source=lib/utils.bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/utils.bash"
+
+arch="$(resolve_arch)"
+versions="$(list_installable_versions "${arch}" "${OC_MIRROR_INCLUDE_PRERELEASE:-0}")"
+
+# Word splitting is intended: join the lines with single spaces.
+# shellcheck disable=SC2086
+echo ${versions}

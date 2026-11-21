@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# bin/latest-stable [query] — print the newest stable installable version.
+#
+# asdf passes an optional version prefix as $1 (`asdf latest oc-mirror 4.20`);
+# it matches whole components, so 4.2 does not match 4.20.x.
+# Pre-releases are never returned.
+
+set -euo pipefail
+
+# shellcheck source=lib/utils.bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/utils.bash"
+
+query="${1:-}"
+
+arch="$(resolve_arch)"
+versions="$(list_installable_versions "${arch}" 0)"
+
+latest="$(
+  printf '%s\n' "${versions}" |
+    awk -v q="${query%.}" 'q == "" || $0 == q || index($0, q ".") == 1' |
+    tail -n 1
+)"
+
+[ -n "${latest}" ] || fail "no stable version found (query: ${query:-none})"
+
+printf '%s\n' "${latest}"
