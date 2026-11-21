@@ -56,7 +56,7 @@ the URL and checksum in `mise.lock`.
 # mise.toml
 [tools."http:oc-mirror"]
 version = "latest"
-postinstall = "chmod +x \"$MISE_TOOL_INSTALL_PATH/oc-mirror\""
+rename_exe = "oc-mirror"
 version_list_url = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/"
 version_regex = 'href="(\d+\.\d+\.\d+)/"'
 version_expr = 'sortVersions(filter(versions, int(split(#, ".")[0]) == 4 && int(split(#, ".")[1]) >= 14))'
@@ -67,8 +67,9 @@ linux-arm64 = { url = "https://mirror.openshift.com/pub/openshift-v4/aarch64/cli
 ```
 
 The tool is then named `http:oc-mirror` (`mise ls-remote http:oc-mirror`).
-The `postinstall` line is needed because Red Hat's tarball stores the binary
-without the executable bit.
+Red Hat's tarball stores the binary without the executable bit. The
+`rename_exe` line makes mise set it; without that line mise installs a file
+that fails with "Permission denied".
 
 Compared with the plugin, this has fixed rules where the plugin checks the
 mirror:
@@ -115,6 +116,10 @@ At the time of writing that is 4.22.z, because the 5.0.z directories contain no
 Pre-releases (`-rc.N`, `-ec.N`) are hidden by default. Set
 `OC_MIRROR_INCLUDE_PRERELEASE=1` to list them, or install one by its exact
 version. Some old pre-releases have no tarball and fail at download.
+
+`oc-mirror version` reports only the minor: Red Hat stamps every build of a
+line as `<minor>.0`, so 4.22.23 prints `Client Version: 4.22.0-...`. This is
+Red Hat's versioning; the plugin installed the version you asked for.
 
 ## Options
 

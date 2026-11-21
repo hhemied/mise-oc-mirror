@@ -29,6 +29,10 @@ contains() {
     *) die "$3 — expected to find '$2' in: ${1:0:400}" ;;
   esac
 }
+# reports <version>: what `oc-mirror version --short` prints for a release.
+# Red Hat stamps every build of a minor as <minor>.0 (4.22.23 reports
+# "4.22.0-..."), so only the minor identifies the build.
+reports() { printf 'Client Version: %s.' "${1%.*}"; }
 # expect_fail <label> <expected stderr text> <cmd...>
 expect_fail() {
   local label="$1" text="$2" out
@@ -102,8 +106,8 @@ EOF
   out="$(mise install 2>&1)" || die "mise install failed: ${out}"
   contains "${out}" "checksum OK" "mise install ${TEST_VERSION} verified the checksum"
   contains "${out}" "/oc-mirror.tar.gz" "mise install used the default tarball"
-  out="$(mise exec -- oc-mirror version 2>&1)" || die "oc-mirror version failed: ${out}"
-  contains "${out}" "${TEST_VERSION}" "mise exec -- oc-mirror version reports ${TEST_VERSION}"
+  out="$(mise exec -- oc-mirror version --short 2>&1)" || die "oc-mirror version failed: ${out}"
+  contains "${out}" "$(reports "${TEST_VERSION}")" "mise exec -- oc-mirror version reports the ${TEST_VERSION%.*} build"
   out="$(mise ls-remote oc-mirror)"
   contains "${out}" "${TEST_VERSION}" "mise ls-remote lists ${TEST_VERSION}"
   out="$(mise latest oc-mirror)"
@@ -120,8 +124,8 @@ oc-mirror = { version = "${RHEL9_VERSION}", variant = "rhel9" }
 EOF
   out="$(mise install 2>&1)" || die "mise install (rhel9) failed: ${out}"
   contains "${out}" "/oc-mirror.rhel9.tar.gz" "mise variant = \"rhel9\" used the rhel9 tarball"
-  out="$(mise exec -- oc-mirror version 2>&1)" || die "rhel9 oc-mirror version failed: ${out}"
-  contains "${out}" "${RHEL9_VERSION}" "rhel9 build runs and reports ${RHEL9_VERSION}"
+  out="$(mise exec -- oc-mirror version --short 2>&1)" || die "rhel9 oc-mirror version failed: ${out}"
+  contains "${out}" "$(reports "${RHEL9_VERSION}")" "rhel9 build runs and reports the ${RHEL9_VERSION%.*} build"
 }
 
 # ---------------------------------------------------------------------------
@@ -158,8 +162,8 @@ test_asdf() {
   contains "${out}" "checksum OK" "asdf install ${TEST_VERSION} verified the checksum"
   mkdir -p /tmp/asdf-default && cd /tmp/asdf-default
   asdf set oc-mirror "${TEST_VERSION}"
-  out="$(asdf exec oc-mirror version 2>&1)" || die "asdf exec oc-mirror failed: ${out}"
-  contains "${out}" "${TEST_VERSION}" "asdf exec oc-mirror version reports ${TEST_VERSION}"
+  out="$(asdf exec oc-mirror version --short 2>&1)" || die "asdf exec oc-mirror failed: ${out}"
+  contains "${out}" "$(reports "${TEST_VERSION}")" "asdf exec oc-mirror version reports the ${TEST_VERSION%.*} build"
   [ -x "${HOME}/.asdf/shims/oc-mirror" ] || die "asdf did not create a shim"
   pass "asdf created the oc-mirror shim"
 
