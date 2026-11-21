@@ -28,11 +28,14 @@ Every download is checked against the SHA-256 in that directory's
 ```toml
 # mise.toml
 [plugins]
-oc-mirror = "https://github.com/hhemied/mise-oc-mirror#<full-commit-sha>"
+oc-mirror = "https://github.com/hhemied/mise-oc-mirror#989ec100ee8ab635fe760cea0f14737056a94adf"
 
 [tools]
 oc-mirror = "4.20.0"
 ```
+
+Pin a full commit SHA from this repo (mise rejects abbreviated ones); the
+one above is the first release.
 
 ```sh
 mise install
