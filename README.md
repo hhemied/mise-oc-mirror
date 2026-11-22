@@ -11,6 +11,11 @@ https://mirror.openshift.com/pub/openshift-v4/<arch>/clients/ocp/<version>/oc-mi
 Every download is checked against the SHA-256 in that directory's
 `sha256sum.txt`.
 
+
+> [!warning] Latest version
+>  oc-mirror is not available yet for the OCP version 5.x
+
+
 ## Requirements
 
 - **Linux.** Red Hat publishes `oc-mirror` as a Linux binary only. On macOS
@@ -92,6 +97,15 @@ asdf set oc-mirror 4.20.0
 oc-mirror version
 ```
 
+## Install with mise
+
+```sh
+mise plugin add oc-mirror https://github.com/hhemied/mise-oc-mirror.git
+mise ls-remote oc-mirror 
+mise use -g oc-mirror@latest
+mise ls --all-sources
+oc mirror --v2 version --short --output yaml
+```
 ## Versions
 
 ```sh
