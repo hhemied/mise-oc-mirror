@@ -12,7 +12,7 @@ Every download is checked against the SHA-256 in that directory's
 `sha256sum.txt`.
 
 
-> [!warning] Latest version
+> [!WARNING] Latest version with OCP 5.x
 >  oc-mirror is not available yet for the OCP version 5.x
 
 
